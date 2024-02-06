@@ -52,9 +52,14 @@ uint16_t pciConfigReadWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offs
     tmp = (uint16_t)((port_long_in(0xCFC) >> ((offset & 2) * 8)) & 0xFFFF);
     return tmp;
 }
-
+uint16_t getac97(){
+    port_word_out( (0 << 16) | (5 << 11) | (0 << 8) | (0 & 0xfc) | ((uint32_t) 0x80000000)+0x2C,0x2);//on reset la carte?
+    port_word_out( (0 << 16) | (5 << 11) | (0 << 8) | (0 & 0xfc) | ((uint32_t) 0x80000000)+0x00 ,0x00 ); 
+    return (uint16_t)(port_long_in ((0 << 16) | (5 << 11) | (0 << 8) | (0 & 0xfc) | ((uint32_t) 0x80000000)+0x30 ));
+} // A REFAIRE.
 int main(void){
-    printf("%x",port_long_in(0x240));
+    printf("%x",getac97());
+    //printf("%x", (0 << 16) | (5 << 11) | (0 << 8) | (0 & 0xfc) | ((uint32_t) 0x80000000)); du coup ça c'est l'adresse de la carte pci AC97? je crois bien que oui.
     //printf("%x",pciConfigReadWord(0,3,0,0));
     return 0;
 

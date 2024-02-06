@@ -25,8 +25,8 @@ HDD_MAP = {
     "tmp" : None
 }
 
-CC   = "gcc"
-CPPC = "g++"
+CC   = "gcc-11"
+CPPC = "g++-11"
 
 CFLAGS     = "-m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-stack-protector -march=i686"
 KERN_FLAGS = f"{CFLAGS} -fno-pie -I include/kernel"
@@ -170,7 +170,7 @@ def build_app_lib():
     if not file_exists(f"{OUT_DIR}/make/zentry.o") or file1_newer("{TOOLS_DIR}/zentry.c", f"{OUT_DIR}/make/zentry.o"):
         cprint(COLOR_INFO, "building zentry...")
         print_and_exec(f"mkdir -p {OUT_DIR}/make")
-        print_and_exec(f"gcc -c {TOOLS_DIR}/zentry.c -o {OUT_DIR}/make/zentry.o {ZAPP_FLAGS}")
+        print_and_exec(f"{CC} -c {TOOLS_DIR}/zentry.c -o {OUT_DIR}/make/zentry.o {ZAPP_FLAGS}")
 
     def build_file(name, fname):
         global total
@@ -337,7 +337,7 @@ def gen_disk(force=False, with_src=False):
     if not file_exists(f"{OUT_DIR}/make/makefsys.bin"):
         cprint(COLOR_INFO, "building makefsys...")
         print_and_exec(f"mkdir -p {OUT_DIR}/make")
-        print_and_exec(f"gcc -o {OUT_DIR}/make/makefsys.bin -Wall -Wextra {TOOLS_DIR}/makefsys/*/*.c")
+        print_and_exec(f"{CC} -o {OUT_DIR}/make/makefsys.bin -Wall -Wextra {TOOLS_DIR}/makefsys/*/*.c")
 
     cprint(COLOR_INFO, "building initrd.bin...")
     print_and_exec(f"./{OUT_DIR}/make/makefsys.bin \"$(pwd)/{OUT_DIR}/disk\"")
