@@ -38,7 +38,7 @@ QEMU_SPL = "qemu-system-i386"
 QEMU_KVM = "kvm"
 
 QEMU_SERIAL = "-serial stdio"
-QEMU_AUDIO  = "-audiodev pa,id=snd0 -machine pcspk-audiodev=snd0"
+QEMU_AUDIO  = "-device sb16  "
 
 # SETTINGS
 
