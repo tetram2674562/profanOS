@@ -174,6 +174,37 @@ codec_table codecs[] =
 	{ 0x00000000, 0x00000000, &default_ops, "Unknown" } /* must be last one, matches every codec */
 };
 
+uint8_t port_byte_in(uint16_t port) {
+    uint8_t result;
+    asm("in %%dx, %%al" : "=a" (result) : "d" (port));
+    return result;
+}
+
+void port_byte_out(uint16_t port, uint8_t data) {
+    asm volatile("out %%al, %%dx" : : "a" (data), "d" (port));
+}
+
+uint16_t port_word_in(uint16_t port) {
+    uint16_t result;
+    asm("in %%dx, %%ax" : "=a" (result) : "d" (port));
+    return result;
+}
+
+void port_word_out(uint16_t port, uint16_t data) {
+    asm volatile("out %%ax, %%dx" : : "a" (data), "d" (port));
+}
+
+uint32_t port_long_in(uint32_t port) {
+    uint32_t result;
+    asm volatile("inl %%dx,%%eax":"=a" (result):"d"(port));
+    return result;
+}
+
+void port_long_out(uint32_t port, uint32_t value) {
+    asm volatile("outl %%eax,%%dx"::"d" (port), "a" (value));
+}
+
+
 static codec_table *
 find_codec_table(uint32_t codecid)
 {
@@ -219,6 +250,51 @@ ac97_get_vendor_id(device_config *config)
 	return (((uint32_t)data1) << 16) | data2;
 }
 
+uint16_t
+emuxki_codec_read(device_config *config, int regno)
+{
+	port_word_out(config->nabmbar + EMU_AC97ADDR, regno);
+	return port_long_in(config->nabmbar + EMU_AC97DATA);
+}
+
+void
+emuxki_codec_write(device_config *config, int regno, uint16_t value)
+{
+	port_word_out(config->nabmbar + EMU_AC97ADDR, regno);
+	port_long_out(config->nabmbar + EMU_AC97DATA, value);
+}
+
+/* inte */
+
+void
+emuxki_inte_enable(device_config *config, uint32_t value)
+{
+	emuxki_reg_write_32(config, EMU_INTE,
+		emuxki_reg_read_32(config, EMU_INTE) | value);
+}
+
+void
+emuxki_inte_disable(device_config *config, uint32_t value)
+{
+	emuxki_reg_write_32(config, EMU_INTE,
+		emuxki_reg_read_32(config, EMU_INTE) & ~value);
+}
+
+/* p16v */
+uint32_t
+emuxki_p16v_read(device_config *config, uint16_t chano, uint16_t reg)
+{
+	emuxki_reg_write_32(config, EMU_A2_PTR, reg << 16 | chano);
+	return emuxki_reg_read_32(config, EMU_A2_DATA);
+}
+
+
+void 
+emuxki_p16v_write(device_config *config, uint16_t chano, uint16_t reg, uint32_t data)
+{
+	emuxki_reg_write_32(config, EMU_A2_PTR, reg << 16 | chano);
+	emuxki_reg_write_32(config, EMU_A2_DATA, data);
+}
 void
 ac97_amp_enable(device_config *config, bool yesno)
 {

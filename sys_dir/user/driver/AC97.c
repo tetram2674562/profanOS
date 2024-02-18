@@ -52,13 +52,32 @@ uint16_t pciConfigReadWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offs
     tmp = (uint16_t)((port_long_in(0xCFC) >> ((offset & 2) * 8)) & 0xFFFF);
     return tmp;
 }
+void ac_97_init(function,offset){
+    uint32_t address;
+    address = (uint32_t)((0 << 16) | (5 << 11) |
+              (function << 8) | (offset & 0xFC) | ((uint32_t)0x80000000)); // alors créer l'addresse de l'ac_97
+    port_long_out(0xCF8, address); // On définit l'adresse du truc que l'on veut config à l'adresse de configuration.
+    //voilà avec ça on peut controler la carte AC-97 si j'ai bien compris :D
+    uint32_t result = port_long_in(0xCFC);
+    if (result != 0xffffffff && result !=0x0){
+        printf("%x",result);
+        printf("\n");
+    }
+    //return "UwU";
+}
 uint16_t getac97(){
-    port_word_out( (0 << 16) | (5 << 11) | (0 << 8) | (0 & 0xfc) | ((uint32_t) 0x80000000)+0x2C,0x2);//on reset la carte?
-    port_word_out( (0 << 16) | (5 << 11) | (0 << 8) | (0 & 0xfc) | ((uint32_t) 0x80000000)+0x00 ,0x00 ); 
-    return (uint16_t)(port_long_in ((0 << 16) | (5 << 11) | (0 << 8) | (0 & 0xfc) | ((uint32_t) 0x80000000)+0x30 ));
+    
+    return port_long_in(0x30);
 } // A REFAIRE.
 int main(void){
-    printf("%x",getac97());
+    /*for (uint32_t function = 0; function < 8; function++){
+        for (uint32_t offset = 0; offset < 255; offset++){
+            ac_97_init(function,offset);
+
+    }
+    }*/
+    ac_97_init(0,0);
+    //printf("%x",getac97());
     //printf("%x", (0 << 16) | (5 << 11) | (0 << 8) | (0 & 0xfc) | ((uint32_t) 0x80000000)); du coup ça c'est l'adresse de la carte pci AC97? je crois bien que oui.
     //printf("%x",pciConfigReadWord(0,3,0,0));
     return 0;
