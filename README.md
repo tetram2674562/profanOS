@@ -17,10 +17,10 @@ You can find a progress map [here](https://framindmap.org/c/maps/1263862/embed)
 
 ## Setup
 
-> **Note** -
-> compilation is guaranteed only on ubuntu 22.04 with
-> gcc 11, it is also possible in windows with virtualization
-> solutions like wsl (on windows 11) or hyperV
+> [!NOTE]
+> Compilation is guaranteed only on ubuntu 22.04 with
+> **gcc 11**, it is also possible in windows with virtualization
+> solutions like wsl (on windows 11) or hyperV.
 
 ### Install dependencies
 
@@ -86,6 +86,9 @@ You can then run the `help` command to see a list of useful commands.
 
 ![banner](https://elydre.github.io/img/profan/banner.png)
 
+> [!TIP]
+> To switch the keyboard layout use the `kb <layout>` command, such as `kb qwerty`.
+
 ## The kernel
 
 The profanOS kernel (generally called generic kernel or profan kernel) is at the heart
@@ -128,6 +131,14 @@ You can also use the lua, sulfur, C and C++ languages to create your own program
 All the ports are available with the command `make addons` / `make waddons` (all ports)
 or by building them manually.
 
+### Libraries
+
+Libraries are loaded from disk. Currently the libraries are not dynamically linked,
+they are loaded only once and are shared between all processes.
+
+- Internal libraries: devio, filesys, fmopen, panda, profan, vgui
+- Standard libraries: math, setjmp, stdio, stdlib, string, time, unistd
+
 ## Real-Hardware
 
 profanOS works on pc with legacy bios but not with uefi. However profanOS
@@ -136,9 +147,9 @@ can work on recent pc by activating bios compatibility.
 To install profanOS on a USB key or an internal disk, it is possible to use
 the installation script `tools/install.sh` or any other image flasher.
 
-> **Warning** -
-> installing an OS on a real machine can be risky and
-> must be done with knowledge of the possible risks
+> [!WARNING]
+> Installing an OS on a real machine can be risky and
+> must be done with knowledge of the possible risks!
 
 ### Install on USB key
 

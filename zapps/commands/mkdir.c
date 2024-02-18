@@ -9,15 +9,14 @@
 
 int main(int argc, char **argv) {
     if (argc != 2) {
-        printf("\033[31mUsage: \033[91mmkdir <name>\033[0m\n");
+        printf("\e[31mUsage: \e[91mmkdir <name>\e[0m\n");
         return 1;
     }
 
     char *pwd = getenv("PWD");
     if (!pwd) pwd = "/";
 
-    char *full_path = malloc(256);
-    assemble_path(pwd, argv[1], full_path);
+    char *full_path = assemble_path(pwd, argv[1]);
 
     int len = strlen(full_path);
 
@@ -41,12 +40,12 @@ int main(int argc, char **argv) {
     sid_t parent_sid = fu_path_to_sid(ROOT_SID, parent_path);
 
     if (IS_NULL_SID(parent_sid) || !fu_is_dir(parent_sid)) {
-        printf("\033[91m%s\033[31m is not a existing directory\033[0m\n", parent_path);
+        printf("\e[91m%s\e[31m is not a existing directory\e[0m\n", parent_path);
     }
 
     // check if the file already exists
     else if (!IS_NULL_SID(fu_path_to_sid(ROOT_SID, full_path))) {
-        printf("\033[91m%s\033[31m already exists\033[0m\n", full_path);
+        printf("\e[91m%s\e[31m already exists\e[0m\n", full_path);
     }
 
     // create the file

@@ -3,7 +3,7 @@
 
 #include <type.h>
 
-#define stdin  (FILE *) 0
+#define stdin  (FILE *) 3
 #define stdout (FILE *) 1
 #define stderr (FILE *) 2
 
@@ -20,6 +20,7 @@
 #define EOF -1
 #define FOPEN_MAX 1024
 #define FILENAME_MAX 20
+#define BUFSIZ 1024
 
 #ifndef SEEK_CUR
 #define SEEK_CUR 1

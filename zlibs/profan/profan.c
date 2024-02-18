@@ -1,10 +1,33 @@
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <stdarg.h>
 #include <stdio.h>
+
+#define PROFAN_C
 
 #include <syscall.h>
 #include <filesys.h>
+#include <profan.h>
 #include <type.h>
+
+// input() setings
+#define FIRST_L 12
+#define SLEEP_T 15
+#define INP_CLR "\e[94m"
+#define INP_RST "\e[0m"
+
+// keyboard scancodes
+#define ESC     1
+#define BACK    14
+#define ENTER   28
+#define LSHIFT  42
+#define RSHIFT  54
+#define SC_MAX  57
+#define LEFT    75
+#define RIGHT   77
+#define DEL     83
+#define RESEND  224
 
 struct stackframe {
     struct stackframe* ebp;
@@ -25,20 +48,38 @@ int main(void) {
     return 0;
 }
 
-void assemble_path(char *old, char *new, char *result) {
-    result[0] = '\0';
-    if (new[0] == '/') {
-        strcpy(result, new);
-        return;
+int userspace_reporter(char *message) {
+    char *term = getenv("TERM");
+    int c = fputs(message, stderr);
+
+    if (term && strcmp(term, "/dev/serial")) {
+        c_serial_print(SERIAL_PORT_A, message);
     }
+    return c == EOF;
+}
+
+char *assemble_path(char *old, char *new) {
+    char *result;
+    int len;
+
+    if (new[0] == '/') {
+        return strdup(new);
+    }
+
+    result = malloc(strlen(old) + strlen(new) + 2);
     strcpy(result, old);
+
     if (result[strlen(result) - 1] != '/') {
         strcat(result, "/");
     }
     strcat(result, new);
-    if (result[strlen(result) - 1] == '/' && strlen(result) != 1) {
-        result[strlen(result) - 1] = '\0';
+
+    len = strlen(result) - 1;
+    if (result[len] == '/' && len > 0) {
+        result[len] = '\0';
     }
+
+    return result;
 }
 
 void profan_print_stacktrace(void) {
@@ -145,7 +186,181 @@ void profan_wait_pid(uint32_t pid) {
         return;
     }
 
-    while (c_process_get_state(pid) != 5) {
+    while (c_process_get_state(pid) < 4) {
         c_process_sleep(current_pid, 10);
     }
+}
+
+char *open_input(int *size) {
+    // save the current cursor position and show it
+    char *term_path = getenv("TERM");
+    if (!term_path)
+        return NULL;
+
+    FILE *term = fopen(term_path, "w");
+
+    fputs("\e[?25l", term);
+    fflush(term);
+
+    uint32_t buffer_actual_size, buffer_index, buffer_size;
+    int sc, last_sc, last_sc_sgt, key_ticks, shift;
+
+    char *buffer = malloc(100);
+    buffer[0] = '\0';
+    buffer_size = 100;
+
+    sc = last_sc = last_sc_sgt = key_ticks = shift = 0;
+    buffer_actual_size = buffer_index = 0;
+
+    while (sc != ENTER) {
+        usleep(SLEEP_T * 1000);
+        sc = c_kb_get_scfh();
+
+        if (sc == RESEND || sc == 0) {
+            sc = last_sc_sgt;
+        } else {
+            last_sc_sgt = sc;
+        }
+
+        key_ticks = (sc != last_sc) ? 0 : key_ticks + 1;
+        last_sc = sc;
+
+        if ((key_ticks < FIRST_L && key_ticks) || key_ticks % 2) {
+            continue;
+        }
+
+        if (sc == LSHIFT || sc == RSHIFT) {
+            shift = 1;
+            continue;
+        }
+
+        if (sc == LSHIFT + 128 || sc == RSHIFT + 128) {
+            shift = 0;
+            continue;
+        }
+
+        if (sc == LEFT) {
+            if (!buffer_index) continue;
+            buffer_index--;
+            fputs("\e[1D", term);
+        }
+
+        else if (sc == RIGHT) {
+            if (buffer_index == buffer_actual_size) continue;
+            buffer_index++;
+            fputs("\e[1C", term);
+        }
+
+        else if (sc == BACK) {
+            if (!buffer_index) continue;
+            buffer_index--;
+            for (uint32_t i = buffer_index; i < buffer_actual_size; i++) {
+                buffer[i] = buffer[i + 1];
+            }
+            buffer[buffer_actual_size--] = '\0';
+            fputs("\e[1D\e[s"INP_CLR, term);
+            fputs(buffer + buffer_index, term);
+            fputs(INP_RST" \e[u", term);
+        }
+
+        else if (sc == DEL) {
+            if (buffer_index == buffer_actual_size) continue;
+            for (uint32_t i = buffer_index; i < buffer_actual_size; i++) {
+                buffer[i] = buffer[i + 1];
+            }
+            buffer[buffer_actual_size--] = '\0';
+            fputs("\e[s"INP_CLR, term);
+            fputs(buffer + buffer_index, term);
+            fputs(INP_RST" \e[u", term);
+        }
+
+        else if (sc == ESC) {
+            fclose(term);
+            buffer = realloc(buffer, buffer_actual_size + 1);
+            if (size)
+                *size = buffer_actual_size;
+            return buffer;
+        }
+
+        else if (sc <= SC_MAX) {
+            char c = profan_kb_get_char(sc, shift);
+            if (c == '\0') continue;
+            if (buffer_size < buffer_actual_size + 2) {
+                buffer_size *= 2;
+                buffer = realloc(buffer, buffer_size);
+            }
+            fputs(INP_CLR, term);
+            fputc(c, term);
+            if (buffer_index < buffer_actual_size) {
+                for (uint32_t i = buffer_actual_size; i > buffer_index; i--) {
+                    buffer[i] = buffer[i - 1];
+                }
+                fputs("\e[s", term);
+                fputs(buffer + buffer_index + 1, term);
+                fputs(INP_RST"\e[u", term);
+            } else
+                fputs(INP_RST, term);
+            buffer[buffer_index++] = c;
+            buffer[++buffer_actual_size] = '\0';
+        }
+
+        else continue;
+        fflush(term);
+    }
+
+    buffer[buffer_actual_size++] = '\n';
+    buffer[buffer_actual_size] = '\0';
+    fputs("\e[?25h\n", term);
+    fclose(term);
+
+    buffer = realloc(buffer, buffer_actual_size + 1);
+    if (size)
+        *size = buffer_actual_size;
+    return buffer;
+}
+
+int serial_debug(char *frm, ...) {
+    va_list args;
+    char *str;
+    int len;
+
+    va_start(args, frm);
+    str = malloc(1024);
+
+    len = vsprintf(str, frm, args);
+    c_serial_print(SERIAL_PORT_A, str);
+
+    free(str);
+    va_end(args);
+
+    return len;
+}
+
+int profan_open(char *path, int flags, ...) {
+    // mode is ignored, permissions are always 777
+
+    sid_t sid = fu_path_to_sid(ROOT_SID, path);
+    if (IS_NULL_SID(sid) && (flags & O_CREAT)) {
+        sid = fu_file_create(0, path);
+    }
+
+    if (IS_NULL_SID(sid)) {
+        return -1;
+    }
+
+    if (flags & O_TRUNC && fu_is_file(sid)) {
+        fu_set_file_size(sid, 0);
+    }
+
+    int fd = fm_open(path);
+
+    if (fd < 0) {
+        return -1;
+    }
+
+    if (flags & O_APPEND) {
+        fm_lseek(fd, 0, SEEK_END);
+    }
+
+    return fd;
 }

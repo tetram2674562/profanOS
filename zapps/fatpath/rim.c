@@ -361,7 +361,7 @@ void main_loop(char *path) {
         }
 
         // check if key is printable
-        else if (key < 58 && key > 0) {
+        else if (key < 58 && key > 0 && profan_kb_get_char(key, shift_pressed)) {
             // add character to data buffer
             for (int i = g_data_size; i > g_data_lines[g_cursor_line] + g_cursor_pos; i--)
                 g_data[i] = g_data[i - 1];
@@ -408,8 +408,8 @@ void quit(void) {
     free(g_data_lines);
     free(g_current_screen);
 
-    c_kprint("\033[2J");
-    fputs("\033[2J", stdout);
+    c_kprint("\e[2J");
+    fputs("\e[2J", stdout);
     fflush(stdout);
 }
 
@@ -424,20 +424,19 @@ int main(int argc, char **argv) {
         char *pwd = getenv("PWD");
         if (!pwd) pwd = "/";
 
-        file = malloc(strlen(pwd) + strlen(argv[1]) + 2);
-        assemble_path(pwd, argv[1], file);
+        file = assemble_path(pwd, argv[1]);
 
         sid_t elm = fu_path_to_sid(ROOT_SID, file);
 
         if (IS_NULL_SID(elm)) {
             elm = fu_file_create(0, file);
             if (IS_NULL_SID(elm)) {
-                printf("\033[91m%s\033[31m failed to create file\033[0m\n", file);
+                printf("\e[91m%s\e[31m failed to create file\e[0m\n", file);
                 free(file);
                 return 1;
             }
         } else if (!fu_is_file(elm)) {
-            printf("\033[91m%s\033[31m file not found\033[0m\n", file);
+            printf("\e[91m%s\e[31m file not found\e[0m\n", file);
             free(file);
             return 1;
         }
