@@ -30,162 +30,114 @@
  */
 #ifndef _AC97_H_
 #define _AC97_H_
-#if __WORDSIZE == 64
-# ifndef __intptr_t_defined
-typedef long int		intptr_t;
-#  define __intptr_t_defined
-# endif
-typedef unsigned long int	uintptr_t;
-#else
-# ifndef __intptr_t_defined
-typedef int			intptr_t;
-#  define __intptr_t_defined
-# endif
-typedef unsigned int		uintptr_t;
-#endif
 #include <ktype.h>
 #include <stdlib.h>
 #include <stdbool.h>
-//#include "config.h"
-/*
-enum AC97_REGISTER {
-	AC97_RESET				= 0x00,
-	AC97_MASTER_VOLUME		= 0x02,
-	AC97_AUX_OUT_VOLUME		= 0x04,
-	AC97_MONO_VOLUME		= 0x06,
-	AC97_MASTER_TONE		= 0x08,
-	AC97_PC_BEEP_VOLUME		= 0x0A,
-	AC97_PHONE_VOLUME		= 0x0C,
-	AC97_MIC_VOLUME			= 0x0E,
-	AC97_LINE_IN_VOLUME		= 0x10,
-	AC97_CD_VOLUME			= 0x12,
-	AC97_VIDEO_VOLUME		= 0x14,
-	AC97_AUX_IN_VOLUME		= 0x16,
-	AC97_PCM_OUT_VOLUME		= 0x18,
-	AC97_RECORD_SELECT		= 0x1A,
-	AC97_RECORD_GAIN		= 0x1C,
-	AC97_RECORD_GAIN_MIC	= 0x1E,
-	AC97_GENERAL_PURPOSE	= 0x20,
-	AC97_3D_CONTROL			= 0x22,
-	AC97_PAGING				= 0x24,
-	AC97_POWERDOWN			= 0x26,
-	AC97_EXTENDED_AUDIO_ID 	= 0x28,
-	AC97_EXTENDED_AUDIO_STATUS	= 0x2A,
-	AC97_PCM_FRONT_DAC_RATE	= 0x2C,
-	AC97_PCM_SURR_DAC_RATE	= 0x2E,
-	AC97_PCM_LFE_DAC_RATE	= 0x30,
-	AC97_PCM_LR_ADC_RATE	= 0x32,
-	AC97_MIC_ADC_RATE		= 0x34,
-	AC97_CENTER_LFE_VOLUME	= 0x36,
-	AC97_SURROUND_VOLUME	= 0x38,
-	AC97_SPDIF_CONTROL		= 0x3A,
-	AC97_VENDOR_ID1			= 0x7C,
-	AC97_VENDOR_ID2			= 0x7E
-};
-typedef int32_t area_id;
-typedef unsigned short 		ushort;
+#define INTEL_VID            0x8086           //; vendor ID: Intel
+#define ICH_DID              0x2415          //; device ID: 82801AA AC'97 Audio Controller (ICH)
+#define ICH0_DID             0x2425           //; device ID: 82801AB AC'97 Audio Controller (ICH0)
+#define ICH2_DID             0x2445           //; device ID: 82801BA/BAM AC'97 Audio Controller (ICH2)
+#define ICH3_DID             0x2485           //; device ID: 82801CA/CAM AC'97 Audio Controller (ICH3)
+#define ICH4_DID             0x24c5           //; device ID: 82801DB/DBL/DBM AC'97 Audio Controller (ICH4)
+#define ICH5_DID             0x24d5           //; device ID: 82801EB/ER AC'97 Audio Controller (ICH5)
+#define ESB_DID              0x25a6          //; device ID: 6300ESB AC'97 Audio Controller (ESB)
+#define ICH6_DID             0x266e          //; device ID: 82801FB/FBM/FR/FW/FRW AC'97 Audio Controller (ICH6)
+#define ICH7_DID             0x27de          //; device ID: 82801GB/GBM/GR/GH/GHM AC'97 Audio Controller (ICH7)
+#define I440MX_DID           0x7195          //; device ID: 82440MX AC'97 Audio Controller (440MX)
+
+//; Other (non-Intel) vendors that are (mostly) compatible with ICHx AC'97 audio
+#define SIS_VID              0x1039          //; vendor ID: Silicon Integrated Systems (SiS)
+#define SIS_7012_DID         0x7012        // ; device ID: SiS7012 AC'97 Sound Controller
+
+#define NAMBAR_REG           0x10          // ; native audio mixer BAR
+#define NAM_SIZE            256            // ; 256 bytes required.
+
+#define NABMBAR_REG          0x14            // ; native audio bus mastering BAR
+#define NABM_SIZE           64             // ; 64 bytes
 
 
 /*
-const char *	ac97_get_3d_stereo_enhancement(device_config *config);
-const char *	ac97_get_vendor_id_description(device_config *config);
-uint32_t			ac97_get_vendor_id(device_config *config);
-void			ac97_init(device_config *config);
+; BUS master registers, accessed via NABMBAR+offset
 
-void ac97_amp_enable(device_config *config, bool yesno);
-typedef struct
-{
-	uint32_t	nabmbar;
-	uint32_t	nambar;
-	uint32_t	irq;
-	uint32_t	type;
-	uint32_t	mmbar; // ich4
-	uint32_t	mbbar; // ich4
-	void *	log_mmbar; // ich4
-	void *	log_mbbar; // ich4
-	area_id area_mmbar; // ich4
-	area_id area_mbbar; // ich4
-
-	ushort	subvendor_id;
-	ushort	subsystem_id;
-
-	ac97_dev *ac97;
-} device_config;
-typedef enum {
-	B_MIX_GAIN = 1 << 0,
-	B_MIX_MUTE = 1 << 1,
-	B_MIX_MONO = 1 << 2,
-	B_MIX_STEREO = 1 << 3,
-	B_MIX_MUX = 1 << 4,
-	B_MIX_MICBOOST = 1 << 5,
-	B_MIX_RECORDMUX = 1 << 6
-} ac97_mixer_type;
-
-typedef struct _ac97_source_info {
-	const char *name;
-	ac97_mixer_type  type;
-	
-	int32_t	id;
-	uint8_t	reg;
-	uint16_t	default_value;
-	uint8_t 	bits:3;
-	uint8_t	ofs:4;
-	uint8_t	mute:1;
-	uint8_t	polarity:1; // max_gain -> 0
-	float	min_gain;
-	float	max_gain;
-	float	granularity;
-} ac97_source_info;
-
-
-typedef struct ac97_dev ac97_dev;
-typedef void	(* codec_init)(ac97_dev * dev);
-typedef	uint16_t	(* codec_reg_read)(void * cookie, uint8_t reg);
-typedef	void	(* codec_reg_write)(void * cookie, uint8_t reg, uint16_t value);
-typedef bool	(* codec_set_rate)(ac97_dev *dev, uint8_t reg, uint32_t rate);
-typedef bool	(* codec_get_rate)(ac97_dev *dev, uint8_t reg, uint32_t *rate);
-
-struct ac97_dev {
-	uint16_t			reg_cache[0x7f];
-
-	void *				cookie;
-
-	uint32_t				codec_id;
-	const char *		codec_info;
-	const char *		codec_3d_stereo_enhancement;
-
-	codec_init			init;
-	codec_reg_read		reg_read;
-	codec_reg_write		reg_write;
-	codec_set_rate		set_rate;
-	codec_get_rate		get_rate;
-
-	uint32_t				max_vsr;
-	uint32_t				min_vsr;
-	uint32_t 				clock;
-	uint64_t				capabilities;
-	bool				reversed_eamp_polarity;
-	uint32_t				subsystem;
-};
-typedef struct
-{
-	uint32_t	nabmbar;
-	uint32_t	nambar;
-	uint32_t	irq;
-	uint32_t	type;
-	uint32_t	mmbar; // ich4
-	uint32_t	mbbar; // ich4
-	void *	log_mmbar; // ich4
-	void *	log_mbbar; // ich4
-	area_id area_mmbar; // ich4
-	area_id area_mbbar; // ich4
-
-	ushort	subvendor_id;
-	ushort	subsystem_id;
-
-	ac97_dev *ac97;
-} device_config;
-extern const ac97_source_info source_info[];
-extern const int32_t source_info_size;
+; ICH supports 3 different types of register sets for three types of things
+; it can do, thus:
+;
+; PCM in (for recording) aka PI
+; PCM out (for playback) aka PO
+; MIC in (for recording) aka MC
 */
+#define PI_BDBAR_REG                 0      // ; PCM in buffer descriptor BAR
+#define PO_BDBAR_REG                 0x10    // ; PCM out buffer descriptor BAR
+#define MC_BDBAR_REG                 0x20     //; MIC in buffer descriptor BAR
+
+#define CUSTOM_SIS_7012_REG                  0x4c    ; SiS7012-specific register, required for unmuting output
+/*
+; each buffer descriptor BAR holds a pointer which has entries to the buffer
+; contents of the .WAV file we're going to play.  Each entry is 8 bytes long
+; (more on that later) and can contain 32 entries total, so each BAR is
+; 256 bytes in length, thus:
+*/
+#define BDL_SIZE                     32*8    //; Buffer Descriptor List size
+#define INDEX_MASK                   31      //; indexes must be 0-31
+
+
+
+#define PI_CIV_REG                   4      // ; PCM in current Index value (RO)
+#define PO_CIV_REG                   0x14   //; PCM out current Index value (RO)
+#define MC_CIV_REG                   0x24     //; MIC in current Index value (RO)
+/*
+;8bit read only
+; each current index value is simply a pointer showing us which buffer
+; (0-31) the codec is currently processing.  Once this counter hits 31, it
+; wraps back to 0.
+; this can be handy to know, as once it hits 31, we're almost out of data to
+; play back or room to record!
+*/
+
+#define PI_LVI_REG                   5       ; PCM in Last Valid Index
+#define PO_LVI_REG                   0x15     ; PCM out Last Valid Index
+#define MC_LVI_REG                   0x25     ; MIC in Last Valid Index
+/*8bit read/write
+ The Last Valid Index is a number (0-31) to let the codec know what buffer
+; number to stop on after processing.  It could be very nasty to play audio
+; from buffers that aren't filled with the audio we want to play.
+*/
+
+#define PI_SR_REG                    6       //; PCM in Status register
+#define PO_SR_REG                    0x16     //; PCM out Status register
+#define MC_SR_REG                    0x26     //; MIC in Status register
+/*
+;16bit read/write
+; status registers.  Bitfields follow:
+*/
+#define FIFO_ERR                     BIT4    //; FIFO Over/Underrun W1TC.
+
+#define BCIS                         BIT3    //; buffer completion interrupt status.
+                                        //; Set whenever the last sample in ANY
+                                        //; buffer is finished.  Bit is only
+                                        //; set when the Interrupt on Complete
+                                        //; (BIT4 of control reg) is set.
+
+#define LVBCI                        BIT2    //; Set whenever the codec has processed
+                                        //; the last buffer in the buffer list.
+                                        //; Will fire an interrupt if IOC bit is
+                                        //; set. Probably set after the last
+                                        //; sample in the last buffer is
+                                        //; processed.  W1TC
+
+                                        //; 
+#define CELV                         BIT1    //; Current buffer == last valid.
+                                        //; Bit is RO and remains set until LVI is
+                                        //; cleared.  Probably set up the start
+                                        //; of processing for the last buffer.
+
+
+#define DCH                          BIT0   // ; DMA controller halted.
+                                        //; set whenever audio stream is stopped
+                                        //; or something else goes wrong.
+
+
+#define PI_PICB_REG                  8       //; PCM in position in current buffer(RO)
+#define PO_PICB_REG                  0x18     //; PCM out position in current buffer(RO)
+#define MC_PICB_REG                 0x28     //; MIC in position in current buffer (RO)
 #endif
